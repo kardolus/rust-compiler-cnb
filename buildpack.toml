@@ -4,6 +4,14 @@ id = "org.cloudfoundry.buildpacks.rust"
 name = "Rust Buildpack"
 version = "0.0.1"
 
+[[metadata.dependencies]]
+  stacks = ["org.cloudfoundry.stacks.bionic"]
+  id = "rust"
+  name = "Rust"
+  sha256 = "fix_me"
+  uri = "https://fix_me"
+  version = "1.33.0-nightly"
+
 [[stacks]]
 id = "org.cloudfoundry.stacks.cflinuxfs3"
 

@@ -1,0 +1,3 @@
+---
+rust:
+  version: 1.33.0-nightly
