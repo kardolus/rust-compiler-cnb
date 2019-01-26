@@ -61,11 +61,11 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 			const version string = "1.2.3"
 
 			it.Before(func() {
-				buildpackYAMLString := fmt.Sprintf("rust:\n  version: %s", version)
+				buildpackYAMLString := fmt.Sprintf("rustup:\n  version: %s", version)
 				Expect(helper.WriteFile(filepath.Join(factory.Detect.Application.Root, "buildpack.yml"), 0666, buildpackYAMLString)).To(Succeed())
 			})
 
-			it("should pass with the requested version of rust", func() {
+			it("should pass with the requested version of rustup-init", func() {
 				code, err := runDetect(factory.Detect)
 				Expect(err).NotTo(HaveOccurred())
 

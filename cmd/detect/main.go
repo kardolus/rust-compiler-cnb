@@ -10,8 +10,8 @@ import (
 	"github.com/buildpack/libbuildpack/buildplan"
 	"github.com/cloudfoundry/libcfbuildpack/detect"
 	"github.com/cloudfoundry/libcfbuildpack/helper"
+	"github.com/go-yaml/yaml"
 	"github.com/kardolus/rust-cnb/rust"
-	"gopkg.in/yaml.v2"
 )
 
 func main() {
@@ -51,15 +51,15 @@ func runDetect(context detect.Detect) (int, error) {
 		}
 
 		config := struct {
-			Rust struct {
+			Rustup struct {
 				Version string `yaml:"version"`
-			} `yaml:"rust"`
+			} `yaml:"rustup"`
 		}{}
 		if err := yaml.Unmarshal(buf, &config); err != nil {
 			return detect.FailStatusCode, err
 		}
 
-		version = config.Rust.Version
+		version = config.Rustup.Version
 	}
 
 	return context.Pass(buildplan.BuildPlan{

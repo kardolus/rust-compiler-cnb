@@ -6,11 +6,11 @@ version = "0.0.1"
 
 [[metadata.dependencies]]
   stacks = ["org.cloudfoundry.stacks.bionic"]
-  id = "rust"
-  name = "Rust"
-  sha256 = "fix_me"
-  uri = "https://fix_me"
-  version = "1.33.0-nightly"
+  id = "rustup"
+  name = "Rustup"
+  sha256 = "8c4ffeda2088dbdd5ea2eac8acef5ddd57dfcfe1f06a503e3da790f93161e1a6"
+  uri = "https://github.com/rust-lang/rustup.rs/archive/1.16.0.tar.gz"
+  version = "1.16.0"
 
 [[stacks]]
 id = "org.cloudfoundry.stacks.cflinuxfs3"

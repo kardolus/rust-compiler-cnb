@@ -1,3 +1,7 @@
 ---
+rustup:
+  version: 1.16.0
 rust:
-  version: 1.33.0-nightly
+  version: nightly
+
+# Version can be: nightly-2016-06-03, nightly, 1.32.0, stable etc
