@@ -27,44 +27,16 @@ func (r Rust) Install(location string, layer layers.DependencyLayer, artifact st
 		return err
 	}
 
-	if err := r.Runner.Run("sh", layer.Root, "rustup-init.sh", "-y"); err != nil {
-		return err
-	}
-
 	// TODO grep version from buildpack.yml
-	// TODO can the rust version be set on the first invocation?
-	// TODO do not hardcode home directory
-	// Current error: Cargo needs gcc
-	homeDir := "/home/pack"
-	installDir := filepath.Join(layer.Root, "install")
-	cargoDir := filepath.Join(installDir, "cargo")
-	multirustDir := filepath.Join(installDir, "multirust")
-
-	os.MkdirAll(installDir, 0777)
-	os.MkdirAll(cargoDir, 0777)
-	os.MkdirAll(multirustDir, 0777)
-
-	if err := layer.OverrideSharedEnv("RUSTUP_HOME", multirustDir); err != nil {
+	layer.Logger.SubsequentLine("Installing Rust Components")
+	if err := r.Runner.Run("sh", layer.Root, "rustup-init.sh", "-y", "--default-toolchain", "nightly"); err != nil {
 		return err
 	}
 
-	if err := layer.OverrideSharedEnv("CARGO_HOME", cargoDir); err != nil {
-		return err
-	}
+	cargoBin := filepath.Join(os.Getenv("HOME"), ".cargo", "bin", "cargo")
 
-	if err := layer.AppendSharedEnv("PATH", filepath.Join(cargoDir, "bin")+":"); err != nil {
-		return err
-	}
-
-	if err := r.Runner.Run(".cargo/bin/rustup", homeDir, "default", "nightly"); err != nil {
-		return err
-	}
-
-	if err := helper.CopyDirectory(filepath.Join(homeDir, ".cargo"), cargoDir); err != nil {
-		return err
-	}
-
-	if err := helper.CopyDirectory(filepath.Join(homeDir, ".multirust"), multirustDir); err != nil {
+	layer.Logger.SubsequentLine("Building app from %s", location)
+	if err := r.Runner.Run(cargoBin, location, "build"); err != nil {
 		return err
 	}
 

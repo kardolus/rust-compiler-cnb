@@ -8,9 +8,9 @@ version = "0.0.1"
 id = "rustup"
 name = "RustUp"
 sha256 = "8c4ffeda2088dbdd5ea2eac8acef5ddd57dfcfe1f06a503e3da790f93161e1a6"
-stacks = ["io.buildpacks.stacks.bionic"]
+stacks = ["org.cloudfoundry.stacks.cflinuxfs3"]
 uri = "https://github.com/rust-lang/rustup.rs/archive/1.16.0.tar.gz"
 version = "1.16.0"
 
 [[stacks]]
-id = "io.buildpacks.stacks.bionic"
+id = "org.cloudfoundry.stacks.cflinuxfs3"

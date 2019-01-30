@@ -58,11 +58,11 @@ func NewContributor(context build.Build, manager PackageManager) (Contributor, b
 		return Contributor{}, false, err
 	}
 
-	lockFile := filepath.Join(context.Application.Root, "Cargo.lock")
+	lockFile := filepath.Join(context.Application.Root, "Cargo.toml")
 	if exists, err := helper.FileExists(lockFile); err != nil {
 		return Contributor{}, false, err
 	} else if !exists {
-		return Contributor{}, false, fmt.Errorf(`unable to find "Cargo.lock"`)
+		return Contributor{}, false, fmt.Errorf(`unable to find "Cargo.toml"`)
 	}
 
 	buf, err := ioutil.ReadFile(lockFile)
@@ -96,11 +96,12 @@ func (c Contributor) Contribute() error {
 	// TODO this should use a downloadlayer instead
 	return c.packagesLayer.Contribute(func(artifact string, layer layers.DependencyLayer) error {
 
-		if err := c.manager.Install(c.packagesLayer.Root, layer, artifact); err != nil {
+		if err := c.manager.Install(c.app.Root, layer, artifact); err != nil {
 			return err
 		}
 
-		return c.launchLayer.WriteMetadata(layers.Metadata{Processes: []layers.Process{{"web", "cargo run"}}})
+		// TODO get app name from Cargo.toml
+		return c.launchLayer.WriteMetadata(layers.Metadata{Processes: []layers.Process{{"web", filepath.Join(c.app.Root, "target", "debug", "web_app")}}})
 	}, c.flags()...)
 }
 
