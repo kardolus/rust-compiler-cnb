@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/kardolus/rust-cnb/utils"
 	"path/filepath"
 	"testing"
 
@@ -38,7 +39,7 @@ func testDetect(t *testing.T, when spec.G, it spec.S) {
 
 	when("there is a Cargo.toml", func() {
 		it.Before(func() {
-			Expect(helper.WriteFile(filepath.Join(factory.Detect.Application.Root, "Cargo.toml"), 0666, "")).To(Succeed())
+			Expect(helper.WriteFile(filepath.Join(factory.Detect.Application.Root, utils.CARGO_TOML), 0666, "")).To(Succeed())
 		})
 
 		when("there is no buildpack.yml", func() {

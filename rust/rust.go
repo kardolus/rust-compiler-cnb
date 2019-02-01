@@ -4,8 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cloudfoundry/libcfbuildpack/helper"
 	"github.com/cloudfoundry/libcfbuildpack/layers"
+	"github.com/kardolus/rust-cnb/utils"
 )
 
 type Runner interface {
@@ -21,22 +21,29 @@ type Rust struct {
 	Logger Logger
 }
 
-func (r Rust) Install(location string, layer layers.DependencyLayer, artifact string) error {
-	layer.Logger.SubsequentLine("Expanding to %s", layer.Root)
-	if err := helper.ExtractTarGz(artifact, layer.Root, 1); err != nil {
+var CargoBin = filepath.Join(os.Getenv("HOME"), ".cargo", "bin", "cargo")
+
+func (r Rust) Install(location string, layer layers.DependencyLayer) error {
+	config, err := utils.ParseConfig(location)
+
+	if err != nil {
 		return err
 	}
+	version := config.Rust.Version
 
-	// TODO grep version from buildpack.yml
 	layer.Logger.SubsequentLine("Installing Rust Components")
-	if err := r.Runner.Run("sh", layer.Root, "rustup-init.sh", "-y", "--default-toolchain", "nightly"); err != nil {
-		return err
+	if version != "" {
+		if err := r.Runner.Run("sh", layer.Root, "rustup-init.sh", "-y", "--default-toolchain", version); err != nil {
+			return err
+		}
+	} else {
+		if err := r.Runner.Run("sh", layer.Root, "rustup-init.sh", "-y"); err != nil {
+			return err
+		}
 	}
-
-	cargoBin := filepath.Join(os.Getenv("HOME"), ".cargo", "bin", "cargo")
 
 	layer.Logger.SubsequentLine("Building app from %s", location)
-	if err := r.Runner.Run(cargoBin, location, "build"); err != nil {
+	if err := r.Runner.Run(CargoBin, location, "build"); err != nil {
 		return err
 	}
 

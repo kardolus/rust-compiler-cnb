@@ -3,15 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/buildpack/libbuildpack/buildplan"
 	"github.com/cloudfoundry/libcfbuildpack/detect"
 	"github.com/cloudfoundry/libcfbuildpack/helper"
-	"github.com/go-yaml/yaml"
 	"github.com/kardolus/rust-cnb/rust"
+	"github.com/kardolus/rust-cnb/utils"
 )
 
 func main() {
@@ -31,36 +30,18 @@ func main() {
 func runDetect(context detect.Detect) (int, error) {
 	var version string
 
-	exists, err := helper.FileExists(filepath.Join(context.Application.Root, "Cargo.toml"))
+	exists, err := helper.FileExists(filepath.Join(context.Application.Root, utils.CARGO_TOML))
 	if err != nil {
 		return detect.FailStatusCode, err
 	} else if !exists {
 		return detect.FailStatusCode, errors.New("no Cargo.toml found!")
 	}
 
-	buildpackYAMLPath := filepath.Join(context.Application.Root, "buildpack.yml")
-	exists, err = helper.FileExists(buildpackYAMLPath)
+	config, err := utils.ParseConfig(context.Application.Root)
 	if err != nil {
 		return detect.FailStatusCode, err
 	}
-
-	if exists {
-		buf, err := ioutil.ReadFile(buildpackYAMLPath)
-		if err != nil {
-			return detect.FailStatusCode, err
-		}
-
-		config := struct {
-			Rustup struct {
-				Version string `yaml:"version"`
-			} `yaml:"rustup"`
-		}{}
-		if err := yaml.Unmarshal(buf, &config); err != nil {
-			return detect.FailStatusCode, err
-		}
-
-		version = config.Rustup.Version
-	}
+	version = config.Rustup.Version
 
 	return context.Pass(buildplan.BuildPlan{
 		rust.Dependency: buildplan.Dependency{

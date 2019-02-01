@@ -5,7 +5,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
+
+	"github.com/kardolus/rust-cnb/utils"
 
 	"github.com/buildpack/libbuildpack/application"
 	"github.com/cloudfoundry/libcfbuildpack/build"
@@ -17,6 +20,8 @@ const (
 	Dependency = "rustup"
 	Cache      = "cache"
 )
+
+var CargoToml string
 
 type Contributor struct {
 	CacheMetadata      Metadata
@@ -30,7 +35,7 @@ type Contributor struct {
 }
 
 type PackageManager interface {
-	Install(location string, layer layers.DependencyLayer, arifact string) error
+	Install(location string, layer layers.DependencyLayer) error
 }
 
 type Metadata struct {
@@ -58,19 +63,23 @@ func NewContributor(context build.Build, manager PackageManager) (Contributor, b
 		return Contributor{}, false, err
 	}
 
-	lockFile := filepath.Join(context.Application.Root, "Cargo.toml")
-	if exists, err := helper.FileExists(lockFile); err != nil {
+	CargoToml = filepath.Join(context.Application.Root, utils.CARGO_TOML)
+	if exists, err := helper.FileExists(CargoToml); err != nil {
 		return Contributor{}, false, err
 	} else if !exists {
-		return Contributor{}, false, fmt.Errorf(`unable to find "Cargo.toml"`)
+		return Contributor{}, false, fmt.Errorf("unable to find " + utils.CARGO_TOML)
 	}
 
-	buf, err := ioutil.ReadFile(lockFile)
-	if err != nil {
-		return Contributor{}, false, err
-	}
+	cargoLock := filepath.Join(context.Application.Root, utils.CARGO_LOCK)
 
-	hash := sha256.Sum256(buf)
+	var hash [32]byte
+	if _, err := os.Stat(cargoLock); err == nil {
+		buf, err := ioutil.ReadFile(cargoLock)
+		if err != nil {
+			return Contributor{}, false, err
+		}
+		hash = sha256.Sum256(buf)
+	}
 
 	// TODO implement caching
 	contributor := Contributor{
@@ -93,15 +102,22 @@ func NewContributor(context build.Build, manager PackageManager) (Contributor, b
 }
 
 func (c Contributor) Contribute() error {
-	// TODO this should use a downloadlayer instead
 	return c.packagesLayer.Contribute(func(artifact string, layer layers.DependencyLayer) error {
-
-		if err := c.manager.Install(c.app.Root, layer, artifact); err != nil {
+		layer.Logger.SubsequentLine("Expanding to %s", layer.Root)
+		if err := helper.ExtractTarGz(artifact, layer.Root, 1); err != nil {
 			return err
 		}
 
-		// TODO get app name from Cargo.toml
-		return c.launchLayer.WriteMetadata(layers.Metadata{Processes: []layers.Process{{"web", filepath.Join(c.app.Root, "target", "debug", "web_app")}}})
+		if err := c.manager.Install(c.app.Root, layer); err != nil {
+			return err
+		}
+
+		meta, err := utils.ParseAppMetadata(c.app.Root)
+		if err != nil {
+			return err
+		}
+
+		return c.launchLayer.WriteMetadata(layers.Metadata{Processes: []layers.Process{{"web", filepath.Join(c.app.Root, "target", "debug", meta.Package.Name)}}})
 	}, c.flags()...)
 }
 
