@@ -43,7 +43,7 @@ func (r Rust) Install(location string, layer layers.DependencyLayer) error {
 	}
 
 	layer.Logger.SubsequentLine("Building app from %s", location)
-	if err := r.Runner.Run(CargoBin, location, "build"); err != nil {
+	if err := r.Runner.Run(CargoBin, location, "build", "--release"); err != nil {
 		return err
 	}
 

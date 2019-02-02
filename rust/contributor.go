@@ -117,7 +117,7 @@ func (c Contributor) Contribute() error {
 			return err
 		}
 
-		return c.launchLayer.WriteMetadata(layers.Metadata{Processes: []layers.Process{{"web", filepath.Join(c.app.Root, "target", "debug", meta.Package.Name)}}})
+		return c.launchLayer.WriteMetadata(layers.Metadata{Processes: []layers.Process{{"web", filepath.Join(c.app.Root, "target", "release", meta.Package.Name)}}})
 	}, c.flags()...)
 }
 
