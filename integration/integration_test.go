@@ -1,6 +1,10 @@
 package integration
 
 import (
+	"fmt"
+	"net/http"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -26,12 +30,42 @@ func testIntegration(t *testing.T, when spec.G, it spec.S) {
 			bp, err := dagger.PackageBuildpack()
 			Expect(err).ToNot(HaveOccurred())
 
-			app, err := dagger.PackBuild(filepath.Join("testdata", "simple_app"), bp)
-			Expect(err).ToNot(HaveOccurred())
-			defer app.Destroy()
+			imageName := "rust_test_image"
+			fixture := filepath.Join("testdata", "simple_app")
 
-			Expect(app.Start()).To(Succeed())
-			// Expect(app.HTTPGet("/")).To(Succeed())
+			cmd := exec.Command("pack", "build", imageName, "--builder", "kardolus/fs3builder", "--buildpack", bp, "-p", fixture, "--no-pull", "--clear-cache")
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			Expect(cmd.Run()).To(Succeed())
+
+			defer cleanUp(imageName)
+
+			cmd = exec.Command("docker", "run", "-p", "8080:8080", imageName)
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			Expect(cmd.Run()).To(Succeed())
+
+			Expect(HTTPGet()).To(Succeed())
 		})
 	})
+}
+
+func cleanUp(imageName string) {
+	cmd := exec.Command("docker", "rmi", imageName, "-f")
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	Expect(cmd.Run()).To(Succeed())
+}
+
+func HTTPGet() error {
+	resp, err := http.Get("http://localhost:8080")
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("received bad response from application")
+	}
+
+	return nil
 }

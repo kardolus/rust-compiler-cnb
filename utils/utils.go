@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -51,7 +50,7 @@ type PackageMetadata struct {
 func ParseConfig(appDir string) (Config, error) {
 	config := Config{}
 	buildpackYAMLPath := filepath.Join(appDir, "buildpack.yml")
-	fmt.Println("Path: ", buildpackYAMLPath)
+
 	exists, err := helper.FileExists(buildpackYAMLPath)
 	if err != nil {
 		return config, err

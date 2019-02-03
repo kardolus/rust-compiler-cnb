@@ -63,6 +63,11 @@ func NewContributor(context build.Build, manager PackageManager) (Contributor, b
 		return Contributor{}, false, err
 	}
 
+	if plan.Version == "" {
+		context.Logger.SubsequentLine("Dependency version not specified, but is required")
+		return Contributor{}, false, nil
+	}
+
 	CargoToml = filepath.Join(context.Application.Root, utils.CARGO_TOML)
 	if exists, err := helper.FileExists(CargoToml); err != nil {
 		return Contributor{}, false, err
@@ -96,7 +101,7 @@ func NewContributor(context build.Build, manager PackageManager) (Contributor, b
 	}
 
 	if _, ok := plan.Metadata["launch"]; ok {
-		contributor.launchContribution = true
+		contributor.launchContribution = false
 	}
 	return contributor, true, nil
 }
