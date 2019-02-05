@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/kardolus/rust-cnb/utils"
 
@@ -24,7 +25,6 @@ const (
 var CargoToml string
 
 type Contributor struct {
-	CacheMetadata      Metadata
 	RustMetadata       Metadata
 	manager            PackageManager
 	app                application.Application
@@ -76,24 +76,17 @@ func NewContributor(context build.Build, manager PackageManager) (Contributor, b
 	}
 
 	cargoLock := filepath.Join(context.Application.Root, utils.CARGO_LOCK)
-
-	var hash [32]byte
-	if _, err := os.Stat(cargoLock); err == nil {
-		buf, err := ioutil.ReadFile(cargoLock)
-		if err != nil {
-			return Contributor{}, false, err
-		}
-		hash = sha256.Sum256(buf)
+	hex, err := hash(cargoLock)
+	if err != nil {
+		return Contributor{}, false, err
 	}
 
-	// TODO implement caching
 	contributor := Contributor{
 		manager:       manager,
 		app:           context.Application,
 		packagesLayer: context.Layers.DependencyLayer(dep),
 		launchLayer:   context.Layers,
-		CacheMetadata: Metadata{Cache, hex.EncodeToString(hash[:])},
-		RustMetadata:  Metadata{"org.cloudfoundry.buildpacks.rust", hex.EncodeToString(hash[:])},
+		RustMetadata:  Metadata{Dependency, hex},
 	}
 
 	if _, ok := plan.Metadata["build"]; ok {
@@ -107,23 +100,34 @@ func NewContributor(context build.Build, manager PackageManager) (Contributor, b
 }
 
 func (c Contributor) Contribute() error {
-	return c.packagesLayer.Contribute(func(artifact string, layer layers.DependencyLayer) error {
-		layer.Logger.SubsequentLine("Expanding to %s", layer.Root)
-		if err := helper.ExtractTarGz(artifact, layer.Root, 1); err != nil {
-			return err
-		}
+	// TODO where to put c.RustMetadata
+	if err := c.packagesLayer.Contribute(c.contributeRustModules, c.flags()...); err != nil {
+		return err
+	}
 
-		if err := c.manager.Install(c.app.Root, layer); err != nil {
-			return err
-		}
+	return c.contributeStartCommand()
+}
 
-		meta, err := utils.ParseAppMetadata(c.app.Root)
-		if err != nil {
-			return err
-		}
+func (c Contributor) contributeRustModules(artifact string, layer layers.DependencyLayer) error {
+	layer.Logger.SubsequentLine("Expanding to %s", layer.Root)
+	if err := helper.ExtractTarGz(artifact, layer.Root, 1); err != nil {
+		return err
+	}
 
-		return c.launchLayer.WriteMetadata(layers.Metadata{Processes: []layers.Process{{"web", filepath.Join(c.app.Root, "target", "release", meta.Package.Name)}}})
-	}, c.flags()...)
+	if err := c.manager.Install(c.app.Root, layer); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c Contributor) contributeStartCommand() error {
+	meta, err := utils.ParseAppMetadata(c.app.Root)
+	if err != nil {
+		return err
+	}
+
+	return c.launchLayer.WriteMetadata(layers.Metadata{Processes: []layers.Process{{"web", filepath.Join(c.app.Root, "target", "release", meta.Package.Name)}}})
 }
 
 func (c Contributor) flags() []layers.Flag {
@@ -137,4 +141,21 @@ func (c Contributor) flags() []layers.Flag {
 		flags = append(flags, layers.Launch)
 	}
 	return flags
+}
+
+func hash(cargoLock string) (string, error) {
+	var hash [32]byte
+
+	if _, err := os.Stat(cargoLock); err == nil {
+		buf, err := ioutil.ReadFile(cargoLock)
+		if err != nil {
+			return "", err
+		}
+		hash = sha256.Sum256(buf)
+	} else { // set "random" hash
+		timestamp := time.Now().Unix()
+		hash = sha256.Sum256([]byte(string(timestamp)))
+	}
+
+	return hex.EncodeToString(hash[:]), nil
 }

@@ -94,4 +94,20 @@ func testContributor(t *testing.T, when spec.G, it spec.S) {
 		Expect(layer).To(test.HaveLayerMetadata(true, true, false))
 		Expect(filepath.Join(layer.Root, "stub.txt")).To(BeARegularFile())
 	})
+
+	it("uses Cargo.lock for identity", func() {
+		test.WriteFile(t, filepath.Join(factory.Build.Application.Root, "Cargo.lock"), "cargo lock")
+		factory.AddDependency(rust.Dependency, stubRustFixture)
+		factory.AddBuildPlan(rust.Dependency, buildplan.Dependency{
+			Version: "*",
+		})
+
+		contributor, ok, err := rust.NewContributor(factory.Build, pkgManager)
+		Expect(ok).To(BeTrue())
+		Expect(err).NotTo(HaveOccurred())
+
+		name, version := contributor.RustMetadata.Identity()
+		Expect(name).To(Equal(rust.Dependency))
+		Expect(version).To(Equal("91c4d0a3ab83742413103cf2ba6a38803f8d8c598f8e1299bb9e31969feb6dd6"))
+	})
 }
