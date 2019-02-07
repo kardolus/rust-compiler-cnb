@@ -29,7 +29,7 @@ func testRust(t *testing.T, when spec.G, it spec.S) {
 		mockLogger *MockLogger
 		pkgManager rust.Rust
 		factory    *test.DetectFactory
-		layer      layers.DependencyLayer
+		layer      layers.Layer
 	)
 
 	it.Before(func() {

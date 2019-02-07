@@ -25,17 +25,18 @@ const (
 var CargoToml string
 
 type Contributor struct {
-	RustMetadata       Metadata
+	CacheMetadata      Metadata
 	manager            PackageManager
 	app                application.Application
-	packagesLayer      layers.DependencyLayer
+	rustupLayer        layers.DependencyLayer
+	pkgLayer           layers.Layer
 	launchLayer        layers.Layers
 	buildContribution  bool
 	launchContribution bool
 }
 
 type PackageManager interface {
-	Install(location string, layer layers.DependencyLayer) error
+	Install(location string, layer layers.Layer) error
 }
 
 type Metadata struct {
@@ -84,9 +85,10 @@ func NewContributor(context build.Build, manager PackageManager) (Contributor, b
 	contributor := Contributor{
 		manager:       manager,
 		app:           context.Application,
-		packagesLayer: context.Layers.DependencyLayer(dep),
+		rustupLayer:   context.Layers.DependencyLayer(dep),
+		pkgLayer:      context.Layers.Layer(Dependency),
 		launchLayer:   context.Layers,
-		RustMetadata:  Metadata{Dependency, hex},
+		CacheMetadata: Metadata{Dependency, hex},
 	}
 
 	if _, ok := plan.Metadata["build"]; ok {
@@ -100,25 +102,26 @@ func NewContributor(context build.Build, manager PackageManager) (Contributor, b
 }
 
 func (c Contributor) Contribute() error {
-	// TODO where to put c.RustMetadata
-	if err := c.packagesLayer.Contribute(c.contributeRustModules, c.flags()...); err != nil {
+	if err := c.rustupLayer.Contribute(c.contributeRustup, c.flags()...); err != nil {
+		return err
+	}
+
+	// nil means, run every time
+	if err := c.pkgLayer.Contribute(nil, c.contributePackages, c.flags()...); err != nil {
 		return err
 	}
 
 	return c.contributeStartCommand()
 }
 
-func (c Contributor) contributeRustModules(artifact string, layer layers.DependencyLayer) error {
+func (c Contributor) contributeRustup(artifact string, layer layers.DependencyLayer) error {
 	layer.Logger.SubsequentLine("Expanding to %s", layer.Root)
-	if err := helper.ExtractTarGz(artifact, layer.Root, 1); err != nil {
-		return err
-	}
+	return helper.ExtractTarGz(artifact, layer.Root, 1)
+}
 
-	if err := c.manager.Install(c.app.Root, layer); err != nil {
-		return err
-	}
-
-	return nil
+func (c Contributor) contributePackages(layer layers.Layer) error {
+	layer.Logger.SubsequentLine("Expanding to %s", layer.Root)
+	return c.manager.Install(c.app.Root, layer)
 }
 
 func (c Contributor) contributeStartCommand() error {

@@ -23,7 +23,7 @@ type Rust struct {
 
 var CargoBin = filepath.Join(os.Getenv("HOME"), ".cargo", "bin", "cargo")
 
-func (r Rust) Install(location string, layer layers.DependencyLayer) error {
+func (r Rust) Install(location string, layer layers.Layer) error {
 	config, err := utils.ParseConfig(location)
 
 	if err != nil {
