@@ -18,8 +18,10 @@ import (
 )
 
 const (
-	Dependency = "rustup"
-	Cache      = "cache"
+	Dependency  = "rustup"
+	Cache       = "rust_cache"
+	TargetDir   = "target"
+	RegistryDir = "registry"
 )
 
 var CargoToml string
@@ -30,13 +32,14 @@ type Contributor struct {
 	app                application.Application
 	rustupLayer        layers.DependencyLayer
 	pkgLayer           layers.Layer
+	cacheLayer         layers.Layer
 	launchLayer        layers.Layers
 	buildContribution  bool
 	launchContribution bool
 }
 
 type PackageManager interface {
-	Install(location string, layer layers.Layer) error
+	Install(location string, layer layers.Layer, cacheLayer layers.Layer) error
 }
 
 type Metadata struct {
@@ -87,6 +90,7 @@ func NewContributor(context build.Build, manager PackageManager) (Contributor, b
 		app:           context.Application,
 		rustupLayer:   context.Layers.DependencyLayer(dep),
 		pkgLayer:      context.Layers.Layer(Dependency),
+		cacheLayer:    context.Layers.Layer(Cache),
 		launchLayer:   context.Layers,
 		CacheMetadata: Metadata{Dependency, hex},
 	}
@@ -111,6 +115,13 @@ func (c Contributor) Contribute() error {
 		return err
 	}
 
+	// TODO if nil is used, cache is being reused every run.
+	// TODO the problem is that the cache is cleared as part of Install.
+	// TODO how does that work in npm?
+	if err := c.cacheLayer.Contribute(c.CacheMetadata, c.contributeCache, layers.Cache); err != nil {
+		return err
+	}
+
 	return c.contributeStartCommand()
 }
 
@@ -121,7 +132,25 @@ func (c Contributor) contributeRustup(artifact string, layer layers.DependencyLa
 
 func (c Contributor) contributePackages(layer layers.Layer) error {
 	layer.Logger.SubsequentLine("Expanding to %s", layer.Root)
-	return c.manager.Install(c.app.Root, layer)
+	return c.manager.Install(c.app.Root, layer, c.cacheLayer)
+}
+
+func (c Contributor) contributeCache(cacheLayer layers.Layer) error {
+	if err := os.MkdirAll(cacheLayer.Root, 0777); err != nil {
+		return fmt.Errorf("unable make Rust cache layer: %s", err.Error())
+	}
+
+	targetPath := filepath.Join(c.app.Root, TargetDir)
+	if err := moveCacheDir(targetPath, cacheLayer.Root, TargetDir); err != nil {
+		return err
+	}
+
+	registryPath := filepath.Join(os.Getenv("HOME"), ".cargo", "registry")
+	if err := moveCacheDir(registryPath, cacheLayer.Root, RegistryDir); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c Contributor) contributeStartCommand() error {
@@ -144,6 +173,26 @@ func (c Contributor) flags() []layers.Flag {
 		flags = append(flags, layers.Launch)
 	}
 	return flags
+}
+
+func moveCacheDir(origin, destinationRoot, cacheDir string) error {
+	destination := filepath.Join(destinationRoot, cacheDir)
+	originExists, err := helper.FileExists(origin)
+	if err != nil {
+		return err
+	}
+
+	if originExists {
+		if err := helper.CopyDirectory(origin, destination); err != nil {
+			return fmt.Errorf(`unable to copy "%s" to "%s": %s`, origin, destinationRoot, err.Error())
+		}
+
+		if err := os.RemoveAll(origin); err != nil {
+			return fmt.Errorf("unable to remove existing Rust cache: %s", err.Error())
+		}
+	}
+
+	return nil
 }
 
 func hash(cargoLock string) (string, error) {

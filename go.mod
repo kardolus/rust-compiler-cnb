@@ -6,6 +6,7 @@ require (
 	github.com/cloudfoundry/dagger v0.0.0-20190131223759-275515017cba
 	github.com/cloudfoundry/libcfbuildpack v1.38.0
 	github.com/cloudfoundry/npm-cnb v0.0.3
+	github.com/fatih/color v1.7.0
 	github.com/go-yaml/yaml v2.1.0+incompatible
 	github.com/golang/mock v1.2.0
 	github.com/onsi/gomega v1.4.3

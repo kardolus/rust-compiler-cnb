@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/cloudfoundry/libcfbuildpack/helper"
 	"github.com/cloudfoundry/libcfbuildpack/layers"
 	"github.com/kardolus/rust-cnb/utils"
 )
@@ -21,9 +22,19 @@ type Rust struct {
 	Logger Logger
 }
 
-var CargoBin = filepath.Join(os.Getenv("HOME"), ".cargo", "bin", "cargo")
+var (
+	CargoHome = filepath.Join(os.Getenv("HOME"), ".cargo")
+	CargoBin  = filepath.Join(CargoHome, "bin", "cargo")
+)
 
-func (r Rust) Install(location string, layer layers.Layer) error {
+func (r Rust) Install(location string, layer layers.Layer, cacheLayer layers.Layer) error {
+	if err := r.moveDir(cacheLayer.Root, location, TargetDir); err != nil {
+		return err
+	}
+	if err := r.moveDir(cacheLayer.Root, CargoHome, RegistryDir); err != nil {
+		return err
+	}
+
 	config, err := utils.ParseConfig(location)
 
 	if err != nil {
@@ -48,4 +59,22 @@ func (r Rust) Install(location string, layer layers.Layer) error {
 	}
 
 	return nil
+}
+
+func (r Rust) moveDir(source, target, name string) error {
+	dir := filepath.Join(source, name)
+	dest := filepath.Join(target, name)
+
+	if exists, err := helper.FileExists(dir); err != nil {
+		return err
+	} else if !exists {
+		return nil
+	}
+
+	r.Logger.Info("Reusing existing %s directory", name)
+	if err := helper.CopyDirectory(dir, dest); err != nil {
+		return err
+	}
+
+	return os.RemoveAll(dir)
 }

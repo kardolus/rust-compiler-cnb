@@ -30,6 +30,7 @@ func testRust(t *testing.T, when spec.G, it spec.S) {
 		pkgManager rust.Rust
 		factory    *test.DetectFactory
 		layer      layers.Layer
+		cacheLayer layers.Layer
 	)
 
 	it.Before(func() {
@@ -55,14 +56,14 @@ func testRust(t *testing.T, when spec.G, it spec.S) {
 			mockRunner.EXPECT().Run("sh", layer.Root, "rustup-init.sh", "-y", "--default-toolchain", version)
 			mockRunner.EXPECT().Run(rust.CargoBin, factory.Detect.Application.Root, "build")
 
-			Expect(pkgManager.Install(factory.Detect.Application.Root, layer)).To(Succeed())
+			Expect(pkgManager.Install(factory.Detect.Application.Root, layer, cacheLayer)).To(Succeed())
 		})
 
 		it("grabs the default rust version if it is not present", func() {
 			mockRunner.EXPECT().Run("sh", layer.Root, "rustup-init.sh", "-y")
 			mockRunner.EXPECT().Run(rust.CargoBin, factory.Detect.Application.Root, "build")
 
-			Expect(pkgManager.Install(factory.Detect.Application.Root, layer)).To(Succeed())
+			Expect(pkgManager.Install(factory.Detect.Application.Root, layer, cacheLayer)).To(Succeed())
 		})
 	})
 }
