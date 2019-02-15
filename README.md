@@ -5,6 +5,18 @@ $ ./scripts/package.sh
 ```
 This builds the buildpack's Go source using GOOS=linux by default. You can supply another value as the first argument to package.sh.
 
+## Configuration
+You can use a buildpack.yml file to configure rust and rustup versions for your rust-app. Here's an example buildpack.yml
+```
+---
+rustup:
+  version: 1.16.0
+rust:
+  version: nightly
+
+# Version can be: nightly-2016-06-03, nightly, 1.32.0, stable etc
+```
+
 ## Quick test
 - Pull the stacks
 ```
