@@ -110,14 +110,11 @@ func (c Contributor) Contribute() error {
 		return err
 	}
 
-	// nil means, run every time
+	// nil means, contribute every time
 	if err := c.pkgLayer.Contribute(nil, c.contributePackages, c.flags()...); err != nil {
 		return err
 	}
 
-	// TODO if nil is used, cache is being reused every run.
-	// TODO the problem is that the cache is cleared as part of Install.
-	// TODO how does that work in npm?
 	if err := c.cacheLayer.Contribute(c.CacheMetadata, c.contributeCache, layers.Cache); err != nil {
 		return err
 	}
@@ -136,17 +133,18 @@ func (c Contributor) contributePackages(layer layers.Layer) error {
 }
 
 func (c Contributor) contributeCache(cacheLayer layers.Layer) error {
+	cacheLayer.Logger.SubsequentLine("Contributing to cache layer")
 	if err := os.MkdirAll(cacheLayer.Root, 0777); err != nil {
 		return fmt.Errorf("unable make Rust cache layer: %s", err.Error())
 	}
 
 	targetPath := filepath.Join(c.app.Root, TargetDir)
-	if err := moveCacheDir(targetPath, cacheLayer.Root, TargetDir); err != nil {
+	if err := copyCacheDir(targetPath, cacheLayer.Root, TargetDir); err != nil {
 		return err
 	}
 
 	registryPath := filepath.Join(os.Getenv("HOME"), ".cargo", "registry")
-	if err := moveCacheDir(registryPath, cacheLayer.Root, RegistryDir); err != nil {
+	if err := copyCacheDir(registryPath, cacheLayer.Root, RegistryDir); err != nil {
 		return err
 	}
 
@@ -175,7 +173,7 @@ func (c Contributor) flags() []layers.Flag {
 	return flags
 }
 
-func moveCacheDir(origin, destinationRoot, cacheDir string) error {
+func copyCacheDir(origin, destinationRoot, cacheDir string) error {
 	destination := filepath.Join(destinationRoot, cacheDir)
 	originExists, err := helper.FileExists(origin)
 	if err != nil {

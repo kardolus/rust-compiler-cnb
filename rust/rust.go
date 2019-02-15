@@ -76,5 +76,5 @@ func (r Rust) moveDir(source, target, name string) error {
 		return err
 	}
 
-	return os.RemoveAll(dir)
+	return nil
 }

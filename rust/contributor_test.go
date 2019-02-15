@@ -110,4 +110,18 @@ func testContributor(t *testing.T, when spec.G, it spec.S) {
 		Expect(name).To(Equal(rust.Dependency))
 		Expect(version).To(Equal("91c4d0a3ab83742413103cf2ba6a38803f8d8c598f8e1299bb9e31969feb6dd6"))
 	})
+
+	when("there is no Cargo.lock", func() {
+		it("should create a contributor", func() {
+			factory.AddDependency(rust.Dependency, stubRustFixture)
+			factory.AddBuildPlan(rust.Dependency, buildplan.Dependency{
+				Version: "*",
+			})
+
+			contributor, ok, err := rust.NewContributor(factory.Build, pkgManager)
+			Expect(contributor.CacheMetadata).NotTo(BeNil())
+			Expect(ok).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
 }
