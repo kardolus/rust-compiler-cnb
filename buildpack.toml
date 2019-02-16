@@ -1,6 +1,6 @@
 
 [buildpack]
-id = "org.cloudfoundry.buildpacks.rust"
+id = "us.kardol.buildpacks.rust"
 name = "Rust Buildpack"
 version = "0.0.1"
 
