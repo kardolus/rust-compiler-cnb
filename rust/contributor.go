@@ -184,12 +184,7 @@ func copyCacheDir(origin, destinationRoot, cacheDir string) error {
 		if err := helper.CopyDirectory(origin, destination); err != nil {
 			return fmt.Errorf(`unable to copy "%s" to "%s": %s`, origin, destinationRoot, err.Error())
 		}
-
-		if err := os.RemoveAll(origin); err != nil {
-			return fmt.Errorf("unable to remove existing Rust cache: %s", err.Error())
-		}
 	}
-
 	return nil
 }
 

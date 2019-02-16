@@ -28,10 +28,10 @@ var (
 )
 
 func (r Rust) Install(location string, layer layers.Layer, cacheLayer layers.Layer) error {
-	if err := r.moveDir(cacheLayer.Root, location, TargetDir); err != nil {
+	if err := r.reuseCacheDir(cacheLayer.Root, location, TargetDir); err != nil {
 		return err
 	}
-	if err := r.moveDir(cacheLayer.Root, CargoHome, RegistryDir); err != nil {
+	if err := r.reuseCacheDir(cacheLayer.Root, CargoHome, RegistryDir); err != nil {
 		return err
 	}
 
@@ -61,7 +61,7 @@ func (r Rust) Install(location string, layer layers.Layer, cacheLayer layers.Lay
 	return nil
 }
 
-func (r Rust) moveDir(source, target, name string) error {
+func (r Rust) reuseCacheDir(source, target, name string) error {
 	dir := filepath.Join(source, name)
 	dest := filepath.Join(target, name)
 
@@ -69,6 +69,14 @@ func (r Rust) moveDir(source, target, name string) error {
 		return err
 	} else if !exists {
 		return nil
+	}
+
+	if exists, err := helper.FileExists(dest); err != nil {
+		return err
+	} else if exists {
+		if err := os.RemoveAll(dest); err != nil {
+			return err
+		}
 	}
 
 	r.Logger.Info("Reusing existing %s directory", name)
